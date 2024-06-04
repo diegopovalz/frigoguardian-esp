@@ -83,51 +83,47 @@ void setup_wifi() {
 void setup() {
   Serial.begin(115200);
 
-  // pinMode(RED_PIN, OUTPUT);
-  // pinMode(GREEN_PIN, OUTPUT);
-  // pinMode(BLUE_PIN, OUTPUT);
+  pinMode(RED_PIN, OUTPUT);
+  pinMode(GREEN_PIN, OUTPUT);
+  pinMode(BLUE_PIN, OUTPUT);
 
-  // dht.begin();
+  dht.begin();
   randomSeed(analogRead(0));
 
   
-  // setup_wifi();
+  setup_wifi();
 
   // MQTT setup
-  // ubidots_client.setServer(UBIDOTS_SERVER, UBIDOTS_PORT);
+  ubidots_client.setServer(UBIDOTS_SERVER, UBIDOTS_PORT);
 
   SPI.begin();      // Initiate SPI bus
   mfrc522.PCD_Init();   // Initiate MFRC522
 }
 
 void loop() {
-  // if (!ubidots_client.connected()) {
-  //   mqttConnect();
-  // }
-  // ubidots_client.loop();
+  if (!ubidots_client.connected()) {
+    mqttConnect();
+  }
+  ubidots_client.loop();
 
   // Wait a few seconds between measurements.
   delay(5000);
-  int randomInt = random(0, 10001);
+  
+  char temp_payload[100];
 
-  // Map the integer to the desired float range
-  float randomFloat = (randomInt / 10000.0) * (20.0 - (-5.0)) + (-5.0);
+  float t = dht.readTemperature();
+  if (isnan(t)) {
+    Serial.println("Failed to read temperature from DHT sensor!");
+    int randomInt = random(0, 10001);
 
-  // Print the random float to the Serial Monitor
-  Serial.println(randomFloat, 2);
-  // setLEDColor(randomFloat);
-
-  // float t = dht.readTemperature();
-  // if (!isnan(t)) {
-  //   String temp_payload = "Temperature: " + String(t) + "°C";
-  //   Serial.println(temp_payload);
-  // } else {
-  //   Serial.println("Failed to read temperature from DHT sensor!");
-  // }
-
-  // char temp_payload[100];
-  // snprintf(temp_payload, sizeof(temp_payload), "{\"value\": %.2f}", randomFloat);
-  // ubidots_client.publish(topic, temp_payload);
+    // Map the integer to the desired float range
+    t = (randomInt / 10000.0) * (20.0 - (-5.0)) + (-5.0);
+  }
+  
+  setLEDColor(t);
+  
+  snprintf(temp_payload, sizeof(temp_payload), "{\"value\": %.2f}", t);
+  ubidots_client.publish(topic, temp_payload);
 
   // Look for new cards
   if (!mfrc522.PICC_IsNewCardPresent()) {
